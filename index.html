@@ -276,8 +276,10 @@
     <div class="chips">
       <button class="chip" data-ins="[회사명]">+ [회사명] 넣기</button>
       <button class="chip" data-ins="[이름]">+ [이름] 넣기</button>
-      <button class="chip" data-ins="**굵게**">+ 굵게 (**글자**)</button>
+      <button class="chip" data-wrap="**">🅱 선택한 글자 굵게</button>
+      <button class="chip" data-wrap="==" style="background:#e8c400;color:#1f2125;">🖍 선택한 글자 형광펜</button>
     </div>
+    <div style="font-size:13px;color:var(--muted);margin-top:8px;">💡 굵게/형광펜은 <b>글자를 드래그로 선택한 다음</b> 버튼을 누르세요. (직접 칠 때는 <code class="ui">**글자**</code> = 굵게, <code class="ui">==글자==</code> = 형광펜)</div>
     <textarea id="bodyInput" rows="10" style="margin-top:10px;" placeholder="[이름]님 안녕하세요, 금병영 김현지입니다 :)
 
 [회사명]과 잘 맞을 것 같은 신규 프로그램이 있어 제안드려요.
@@ -340,7 +342,7 @@
     파일: <code>C:\Users\Hyunji\wm_batch\침투부_발송_v3.gs</code> — 시트의 확장 프로그램 &gt; Apps Script에 전체 붙여넣기 → 저장 → 시트 새로고침.
     치환자: [회사명] [이름] ([담당자]·[수신자]도 이름으로 치환) · **굵게** 지원 · 첨부는 "순번_" 시작 파일 전부 자동 매칭.
   </details>
-  <div class="footer">침투부 메일 일괄발송 툴 v4 · 문의는 현지님께</div>
+  <div class="footer">침투부 메일 일괄발송 툴 v5 · 문의는 현지님께</div>
 </div>
 
 <script>
@@ -605,6 +607,7 @@ function renderMailHtml(tpl, company, name) {
   t = t.replace(/\[회사명\]/g, '<span style="background:#fff3cd;border-radius:4px;padding:0 3px;">' + esc(company) + '</span>')
        .replace(/\[이름\]|\[담당자\]|\[수신자\]/g, '<span style="background:#fff3cd;border-radius:4px;padding:0 3px;">' + esc(name) + '</span>');
   t = t.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  t = t.replace(/==([^=\n]+)==/g, '<span style="background:#ffe45c;border-radius:3px;padding:0 2px;">$1</span>');
   return t.replace(/\r?\n/g, '<br>');
 }
 function refreshMailPreview() {
@@ -642,11 +645,29 @@ $('copyPath').addEventListener('click', function () {
 document.querySelectorAll('.chip').forEach(function (chip) {
   chip.addEventListener('click', function () {
     var ta = $('bodyInput');
-    var ins = chip.getAttribute('data-ins');
     var s = ta.selectionStart, e = ta.selectionEnd;
-    ta.value = ta.value.slice(0, s) + ins + ta.value.slice(e);
-    ta.focus();
-    ta.selectionStart = ta.selectionEnd = s + ins.length;
+    var wrap = chip.getAttribute('data-wrap');
+    if (wrap) {
+      // 선택한 글자를 **글자** / ==글자== 로 감싸기
+      var selected = ta.value.slice(s, e);
+      if (selected) {
+        ta.value = ta.value.slice(0, s) + wrap + selected + wrap + ta.value.slice(e);
+        ta.focus();
+        ta.selectionStart = ta.selectionEnd = e + wrap.length * 2;
+      } else {
+        // 선택 없이 누르면 틀을 넣고 "글자" 부분을 선택 상태로 (바로 타이핑하면 교체됨)
+        var ph = '글자';
+        ta.value = ta.value.slice(0, s) + wrap + ph + wrap + ta.value.slice(e);
+        ta.focus();
+        ta.selectionStart = s + wrap.length;
+        ta.selectionEnd = s + wrap.length + ph.length;
+      }
+    } else {
+      var ins = chip.getAttribute('data-ins');
+      ta.value = ta.value.slice(0, s) + ins + ta.value.slice(e);
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = s + ins.length;
+    }
     refreshMailPreview();
   });
 });
